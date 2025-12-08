@@ -31,7 +31,7 @@ class CacheInvalidator {
 	/**
 	 * @var GlossaryCache
 	 */
-	private $cache = null;
+	private $glossaryCache = null;
 
 	/**
 	 * @since 1.0
