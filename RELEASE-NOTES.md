@@ -1,5 +1,10 @@
 This file contains the RELEASE-NOTES of the Semantic Glossary (a.k.a. SG) extension.
 
+### 5.0.3
+Released on TBA.
+
+* Fix "creation of dynamic property is deprecated".
+
 ### 5.0.2
 Released on TBA.
 
