@@ -2,14 +2,16 @@
 
 namespace SG\Maintenance;
 
+use Lingo\LingoParser;
 use SG\Cache\GlossaryCache;
 use SG\PropertyRegistrationHelper;
+use SMW\DIProperty;
+use SMW\MediaWiki\Jobs\UpdateJob;
+use SMW\Query\Language\SomeProperty;
+use SMW\Query\Language\ThingDescription;
+use SMW\Query\QueryResult;
 use SMW\Store;
-use SMWDIProperty as DIProperty;
 use SMWQuery as Query;
-use SMWSomeProperty as SomeProperty;
-use SMWThingDescription as ThingDescription;
-use SMWUpdateJob as UpdateJob;
 
 /**
  * Part of the `rebuildGlossaryCache.php` maintenance script
@@ -146,7 +148,7 @@ class GlossaryCacheRebuilder {
 		$countQuery->querymode = Query::MODE_COUNT;
 
 		$queryResult = $this->store->getQueryResult( $countQuery );
-		$numberOfPages = $queryResult instanceof \SMWQueryResult ? $queryResult->getCountValue() : $queryResult;
+		$numberOfPages = $queryResult instanceof QueryResult ? $queryResult->getCountValue() : $queryResult;
 
 		$resultQuery = new Query(
 			$description,
@@ -169,7 +171,7 @@ class GlossaryCacheRebuilder {
 	private function removeEntitiesFromCache( array $pages ) {
 		$cache = $this->glossaryCache->getCache();
 
-		$cache->delete( $this->glossaryCache->getKeyForLingo() );
+		LingoParser::purgeCache();
 
 		foreach ( $pages as $page ) {
 			$cache->delete( $this->glossaryCache->getKeyForSubject( $page ) );

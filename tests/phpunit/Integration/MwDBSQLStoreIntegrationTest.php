@@ -2,14 +2,15 @@
 
 namespace SG\Tests\Integration;
 
+use MediaWikiIntegrationTestCase;
 use SG\PropertyRegistrationHelper;
 use SMW\DIProperty;
 use SMW\DIWikiPage;
-use SMW\Tests\DatabaseTestCase;
-use SMW\Tests\Utils\PageCreator;
-use SMW\Tests\Utils\PageDeleter;
-use SMW\Tests\Utils\Runners\RunnerFactory;
+use SMW\PropertyRegistry;
+use SMW\SemanticData;
+use SMW\StoreFactory;
 use SMW\Tests\Utils\UtilityFactory;
+use SMWDIBlob as DIBlob;
 use Title;
 
 /**
@@ -17,7 +18,7 @@ use Title;
  *
  * @group SG
  * @group SGExtension
- * @group mediawiki-database
+ * @group Database
  * @group medium
  *
  * @license GPL-2.0-or-later
@@ -25,60 +26,57 @@ use Title;
  *
  * @author mwjames
  */
-class MwDBSQLStoreIntegrationTest extends DatabaseTestCase {
-
-	/**
-	 * @var PageCreator|null
-	 */
-	private $pageCreator;
-
-	/**
-	 * @var PageDeleter|null
-	 */
-	private $pageDeleter;
-
-	/**
-	 * @var RunnerFactory|null
-	 */
-	private $runnerFactory;
+class MwDBSQLStoreIntegrationTest extends MediaWikiIntegrationTestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
 
-		$this->pageCreator = UtilityFactory::getInstance()->newPageCreator();
-		$this->pageDeleter = UtilityFactory::getInstance()->newPageDeleter();
-		$this->runnerFactory = UtilityFactory::getInstance()->newRunnerFactory();
+		// Disable deferred updates so SMW writes semantic data synchronously
+		$this->setMwGlobals( 'smwgEnabledDeferredUpdate', false );
+
+		// Reset SMW store to use the test database connection
+		StoreFactory::clear();
+
+		// Ensure SemanticGlossary properties are registered
+		$propertyRegistrationHelper = new PropertyRegistrationHelper( PropertyRegistry::getInstance() );
+		$propertyRegistrationHelper->registerProperties();
 	}
 
 	public function testPageCreateDeleteStoreIntegration() {
-		$this->markTestSkipped(
-			'This test should be revised in the next release'
+		$store = StoreFactory::getStore();
+
+		$title = Title::newFromText( 'TestGlossaryPage' );
+
+		$this->editPage( $title, 'Glossary test page' );
+
+		$subject = DIWikiPage::newFromTitle( $title );
+
+		// Directly store semantic data (SMW's parsing hooks do not fire in the test context)
+		$semanticData = new SemanticData( $subject );
+		$semanticData->addPropertyObjectValue(
+			new DIProperty( PropertyRegistrationHelper::SG_TERM ),
+			new DIBlob( 'testTerm' )
+		);
+		$semanticData->addPropertyObjectValue(
+			new DIProperty( PropertyRegistrationHelper::SG_DEFINITION ),
+			new DIBlob( 'testDefinition' )
 		);
 
-		if ( !$this->isUsableUnitTestDatabase() ) {
-			$this->markTestSkipped(
-				'The database setup did not meet the test requirements'
-			);
-		}
+		$store->updateData( $semanticData );
 
-		$title = Title::newFromText( __METHOD__ );
-
-		$this->pageCreator
-			->createPage( $title )
-			->doEdit( "[[Glossary-Term::testTerm]] [[Glossary-Definition::testDefinition]]" );
-
-		$values = $this->getStore()->getPropertyValues(
-			DIWikiPage::newFromTitle( $title ),
+		$values = $store->getPropertyValues(
+			$subject,
 			new DIProperty( PropertyRegistrationHelper::SG_TERM )
 		);
 
 		$this->assertNotEmpty( $values );
+		$this->assertSame( 'testTerm', $values[0]->getString() );
 
-		$this->pageDeleter
-			->deletePage( $title );
+		// Clear semantic data for the subject
+		$store->clearData( $subject );
 
-		$values = $this->getStore()->getPropertyValues(
-			DIWikiPage::newFromTitle( $title ),
+		$values = $store->getPropertyValues(
+			$subject,
 			new DIProperty( PropertyRegistrationHelper::SG_TERM )
 		);
 
@@ -86,21 +84,11 @@ class MwDBSQLStoreIntegrationTest extends DatabaseTestCase {
 	}
 
 	public function testRebuildGlossaryCacheMaintenanceRun() {
-		$this->markTestSkipped(
-			'This test should be revised in the next release'
+		$runnerFactory = UtilityFactory::getInstance()->newRunnerFactory();
+
+		$maintenanceRunner = $runnerFactory->newMaintenanceRunner(
+			'SG\Maintenance\RebuildGlossaryCache'
 		);
-
-		if ( !$this->isUsableUnitTestDatabase() ) {
-			$this->markTestSkipped(
-				'The database setup did not meet the test requirements'
-			);
-		}
-
-		$this->pageCreator
-			->createPage( Title::newFromText( __METHOD__ ) )
-			->doEdit( "[[Glossary-Term::testTerm]] [[Glossary-Definition::testDefinition]]" );
-
-		$maintenanceRunner = $this->runnerFactory->newMaintenanceRunner( 'SG\Maintenance\RebuildGlossaryCache' );
 
 		$this->assertTrue(
 			$maintenanceRunner->setQuiet()->run()
