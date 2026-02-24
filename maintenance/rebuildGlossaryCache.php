@@ -2,6 +2,9 @@
 
 namespace SG\Maintenance;
 
+use SG\Cache\GlossaryCache;
+use SMW\StoreFactory;
+
 $basePath = getenv( 'MW_INSTALL_PATH' ) !== false ? getenv( 'MW_INSTALL_PATH' ) : __DIR__ . '/../../..';
 
 require_once $basePath . '/maintenance/Maintenance.php';
@@ -48,12 +51,10 @@ class RebuildGlossaryCache extends \Maintenance {
 			return false;
 		}
 
-		$this->reportMessage( "This script is not yet finished with the latest version of Lingo!\n\n" );
-
-		/*$glossaryCacheRebuilder = new GlossaryCacheRebuilder(
+		$glossaryCacheRebuilder = new GlossaryCacheRebuilder(
 			StoreFactory::getStore(),
 			new GlossaryCache(),
-			array( $this, 'reportMessage' )
+			[ $this, 'reportMessage' ]
 		);
 
 		$glossaryCacheRebuilder->setParameters( $this->mOptions );
@@ -62,8 +63,8 @@ class RebuildGlossaryCache extends \Maintenance {
 			return true;
 		}
 
-		$this->reportMessage( $this->mDescription . "\n\n" . 'Use option --help for details.' . "\n"  );
-		*/
+		$this->reportMessage( $this->mDescription . "\n\n" . 'Use option --help for details.' . "\n" );
+
 		return false;
 	}
 

@@ -11,15 +11,15 @@ endif
 EXTENSION=SemanticGlossary
 
 # docker images
-MW_VERSION?=1.39
-PHP_VERSION?=8.1
+MW_VERSION?=1.43
+PHP_VERSION?=8.2
 DB_TYPE?=sqlite
 DB_IMAGE?=""
 
 # extensions
-SMW_VERSION?=dev-master
+SMW_VERSION?=6.0.1
 MM_VERSION ?= 3.1.0
-LINGO_VERSION ?= "dev-master"
+LINGO_VERSION ?= 3.2.3
 
 # composer
 # Enables "composer update" inside of extension
